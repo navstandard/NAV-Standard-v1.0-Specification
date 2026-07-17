@@ -60,6 +60,14 @@ h1 {
   font-weight: 700;
 }
 
+.hero-subtitle {
+  max-width: 760px;
+  margin: 18px 0 0;
+  color: #d9e3eb;
+  font-size: 1.22rem;
+  line-height: 1.45;
+}
+
 h2 {
   margin: 0 0 16px;
   font-size: 1.45rem;
@@ -110,6 +118,78 @@ p {
   padding-top: 4px;
 }
 
+.flow-section {
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.concept-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.concept-flow li {
+  position: relative;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  background: #f9fafb;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.concept-flow li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -20px;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.concept-flow span {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.caption {
+  max-width: 760px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.provide-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.provide-list li {
+  min-height: 88px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-weight: 700;
+}
+
 .link-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -147,7 +227,7 @@ p {
   font-size: 0.92rem;
 }
 
-ul {
+ul:not(.provide-list) {
   max-width: 760px;
   margin: 0;
   padding-left: 22px;
@@ -172,17 +252,49 @@ li + li {
   color: #ffffff;
 }
 
+@media (max-width: 900px) {
+  .provide-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 760px) {
   .header-content {
     padding: 40px 0 36px;
   }
 
+  .hero-subtitle {
+    font-size: 1.08rem;
+  }
+
   .status-block dl,
-  .link-grid {
+  .link-grid,
+  .provide-list {
     grid-template-columns: 1fr;
   }
 
-  .link-grid a {
+  .flow-section {
+    padding: 18px;
+  }
+
+  .concept-flow {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .concept-flow li {
+    min-height: 76px;
+  }
+
+  .concept-flow li:not(:last-child)::after {
+    top: auto;
+    right: 50%;
+    bottom: -18px;
+    transform: translateX(50%) rotate(135deg);
+  }
+
+  .link-grid a,
+  .provide-list li {
     min-height: auto;
   }
 }
