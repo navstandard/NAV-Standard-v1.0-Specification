@@ -1,4 +1,4 @@
-# NAV Standard v1.0 Publication Candidate
+# NAV Standard v1.0 Specification
 
 Status: Published
 
