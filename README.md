@@ -1,8 +1,14 @@
 # NAV Standard v1.0 Publication Candidate
 
-Status: Publication Candidate. NAV Standard v1.0 has not been declared published.
+Status: Published
 
-NAV stands for Network Attached Verification. NAV defines a certificate format and validation requirements for accountable verification against authority evidence.
+Version: 1.0.0
+
+Publication Date: 17 July 2026
+
+NAV (Network Attached Verification) is an open standard for representing, validating, and exchanging verifiable evidence that AI-generated or machine-generated output has been evaluated against identified authoritative sources.
+
+NAV defines a certificate format and validation requirements for accountable verification against authority evidence. The standard is implementation-independent and may be implemented by any software system that conforms to the published specification.
 
 NAV addresses a narrow problem: machine-generated output may influence institutional decisions, and institutions need portable evidence showing how that output was checked against an identified authority record.
 
