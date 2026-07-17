@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NAV Certificate Validator</title>
+<style>
+:root{font-family:Arial,sans-serif;color:#171717;background:#f6f6f3}
+body{margin:0;padding:24px}
+main{max-width:980px;margin:0 auto}
+h1{font-size:24px;margin:0 0 16px}
+.grid{display:grid;grid-template-columns:1fr;gap:14px}
+textarea{width:100%;min-height:300px;box-sizing:border-box;font:13px Consolas,monospace;padding:12px;border:1px solid #9a9a92;background:#fff}
+#drop{border:2px dashed #8a8a82;padding:16px;background:#fff}
+#drop.hot{border-color:#1261a0;background:#eef6ff}
+.panel{background:#fff;border:1px solid #d0d0c8;padding:14px;margin-top:12px}
+.banner{display:inline-block;padding:8px 10px;font-weight:700;color:#fff}
+.pass{background:#146b3a}.fail{background:#a12424}
+.kv{display:grid;grid-template-columns:190px 1fr;gap:6px 10px;margin-top:10px;font-size:13px}
+.k{font-weight:700}.v{font-family:Consolas,monospace;overflow-wrap:anywhere}
+.err{font-family:Consolas,monospace;color:#8a1f1f}
+.assert{border-top:1px solid #e2e2dc;padding-top:10px;margin-top:10px}
+.tag{font:12px Consolas,monospace;background:#ecece6;padding:2px 5px}
+</style>
+</head>
+<body>
+<main>
+<h1>Network Attached Verification (NAV) Certificate Validator</h1>
+<div id="drop">Drop a certificate JSON file here, or paste JSON below.</div>
+<div class="grid">
+<textarea id="certin" spellcheck="false" aria-label="Certificate JSON"></textarea>
+</div>
+<div id="result"></div>
+</main>
+<script>
+(function(global){
+  const VERDICTS = new Set(["VERIFIED","VERIFIED_WITH_LIMITATIONS","MATERIAL_DEFECT","HALLUCINATION_DETECTED","UNVERIFIED"]);
+  const DECISIONS = new Set(["AUTHORIZED","AUTHORIZED_WITH_LIMITATIONS","WITHHELD_UNVERIFIABLE","REFUSED"]);
+  const HEX64 = /^[0-9a-f]{64}$/;
+
+  function canonicalize(value){
+    if (value === null || typeof value !== "object") return JSON.stringify(value);
+    if (Array.isArray(value)) return "[" + value.map(canonicalize).join(",") + "]";
+    return "{" + Object.keys(value).sort().map(k => JSON.stringify(k) + ":" + canonicalize(value[k])).join(",") + "}";
+  }
+
+  async function sha256hex(text){
+    const data = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  function isObject(v){ return v && typeof v === "object" && !Array.isArray(v); }
+  function isHex64(v){ return typeof v === "string" && HEX64.test(v); }
+  function requireType(errors, obj, key, pred, expected, path){
+    if (!(key in obj)){ errors.push(path + "." + key + ": missing required field"); return undefined; }
+    if (!pred(obj[key])){ errors.push(path + "." + key + ": expected " + expected); return undefined; }
+    return obj[key];
+  }
+
+  function validateSchema(cert){
+    const errors = [];
+    if (!isObject(cert)) return ["$: expected object"];
+    requireType(errors, cert, "certificate_version", v => typeof v === "string", "string", "$");
+    requireType(errors, cert, "gate_version", v => typeof v === "string", "string", "$");
+    requireType(errors, cert, "issued_at", v => typeof v === "string", "string", "$");
+    requireType(errors, cert, "certificate_id", v => typeof v === "string", "string", "$");
+    requireType(errors, cert, "mode", v => typeof v === "string", "string", "$");
+    const decision = requireType(errors, cert, "decision", v => typeof v === "string", "string", "$");
+    const integrity = requireType(errors, cert, "integrity_sha256", v => typeof v === "string", "string", "$");
+    if (cert.certificate_version !== "vari-gate-cert-1") errors.push("$.certificate_version: expected vari-gate-cert-1");
+    if (decision !== undefined && !DECISIONS.has(decision)) errors.push("$.decision: unknown decision");
+    if (integrity !== undefined && !isHex64(integrity)) errors.push("$.integrity_sha256: expected lowercase sha256 hex");
+
+    const action = requireType(errors, cert, "action", isObject, "object", "$");
+    if (action){
+      requireType(errors, action, "output_id", v => typeof v === "string", "string", "$.action");
+      const outputHash = requireType(errors, action, "output_sha256", v => typeof v === "string", "string", "$.action");
+      if (outputHash !== undefined && !isHex64(outputHash)) errors.push("$.action.output_sha256: expected lowercase sha256 hex");
+    }
+
+    const authority = requireType(errors, cert, "authority", isObject, "object", "$");
+    if (authority){
+      requireType(errors, authority, "authority_id", v => typeof v === "string", "string", "$.authority");
+      const snap = requireType(errors, authority, "snapshot_sha256", v => typeof v === "string", "string", "$.authority");
+      if (snap !== undefined && !isHex64(snap)) errors.push("$.authority.snapshot_sha256: expected lowercase sha256 hex");
+    }
+
+    const assertions = requireType(errors, cert, "assertions", Array.isArray, "array", "$");
+    if (assertions){
+      assertions.forEach((a, i) => {
+        const path = "$.assertions[" + i + "]";
+        if (!isObject(a)){ errors.push(path + ": expected object"); return; }
+        requireType(errors, a, "assertion", v => typeof v === "string", "string", path);
+        const verdict = requireType(errors, a, "verdict", v => typeof v === "string", "string", path);
+        requireType(errors, a, "method", v => typeof v === "string", "string", path);
+        requireType(errors, a, "reasoning", v => typeof v === "string", "string", path);
+        if (!("supporting_passage" in a)) errors.push(path + ".supporting_passage: missing required field");
+        else if (a.supporting_passage !== null && typeof a.supporting_passage !== "string") errors.push(path + ".supporting_passage: expected string or null");
+        const evidence = requireType(errors, a, "evidence_sha256", v => typeof v === "string", "string", path);
+        const retrievalCount = requireType(errors, a, "retrieval_count", Number.isInteger, "integer", path);
+        if (verdict !== undefined && !VERDICTS.has(verdict)) errors.push(path + ".verdict: unknown verdict");
+        if (evidence !== undefined && !isHex64(evidence)) errors.push(path + ".evidence_sha256: expected lowercase sha256 hex");
+        if (retrievalCount !== undefined && retrievalCount < 0) errors.push(path + ".retrieval_count: expected non-negative integer");
+      });
+    }
+    return errors;
+  }
+
+  async function validateObject(cert){
+    const errors = validateSchema(cert);
+    const body = {};
+    if (isObject(cert)) Object.keys(cert).forEach(k => { if (k !== "integrity_sha256") body[k] = cert[k]; });
+    const computed = await sha256hex(canonicalize(body));
+    if (!isObject(cert) || computed !== cert.integrity_sha256) errors.push("$.integrity_sha256: does not match canonical certificate body");
+    return {pass: errors.length === 0, errors, computed, certificate: cert};
+  }
+
+  async function validateText(text){
+    try { return await validateObject(JSON.parse(text)); }
+    catch (err) { return {pass:false, errors:["JSON parse error: " + err.message], computed:null, certificate:null}; }
+  }
+
+  global.NAVCertValidator = {canonicalize, validateObject, validateText};
+})(typeof window !== "undefined" ? window : globalThis);
+
+function esc(s){return String(s == null ? "" : s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+async function render(){
+  const raw = document.getElementById("certin").value.trim();
+  const out = document.getElementById("result");
+  if (!raw){ out.innerHTML = ""; return; }
+  const result = await window.NAVCertValidator.validateText(raw);
+  let html = '<div class="panel"><span class="banner ' + (result.pass ? "pass" : "fail") + '">' + (result.pass ? "PASS" : "FAIL") + '</span>';
+  html += '<div class="kv">';
+  html += '<div class="k">computed sha256</div><div class="v">' + esc(result.computed || "(not computed)") + '</div>';
+  if (result.certificate){
+    html += '<div class="k">signed sha256</div><div class="v">' + esc(result.certificate.integrity_sha256 || "(absent)") + '</div>';
+    html += '<div class="k">decision</div><div class="v">' + esc(result.certificate.decision || "") + '</div>';
+    html += '<div class="k">certificate id</div><div class="v">' + esc(result.certificate.certificate_id || "") + '</div>';
+  }
+  html += '</div>';
+  if (result.errors.length) html += '<ul>' + result.errors.map(e => '<li class="err">' + esc(e) + '</li>').join("") + '</ul>';
+  if (result.pass && Array.isArray(result.certificate.assertions)){
+    result.certificate.assertions.forEach(a => {
+      html += '<div class="assert"><span class="tag">' + esc(a.verdict) + '</span> ' + esc(a.assertion);
+      if (a.supporting_passage) html += '<div>' + esc(a.supporting_passage) + '</div>';
+      html += '</div>';
+    });
+  }
+  out.innerHTML = html + '</div>';
+}
+
+let timer = null;
+document.getElementById("certin").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(render, 250); });
+const drop = document.getElementById("drop");
+["dragover","dragenter"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("hot"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("hot"); }));
+drop.addEventListener("drop", async e => {
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  document.getElementById("certin").value = await f.text();
+  render();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+{
+  "certificate_version": "vari-gate-cert-1",
+  "gate_version": "evidence-gate-poc-0.1",
+  "issued_at": "2026-07-13T19:45:37.263907+00:00",
+  "certificate_id": "5e5cecf7-d2c6-4571-86a4-614555f354c5",
+  "action": {
+    "output_id": "OUT-006",
+    "output_sha256": "4cbee5ab7fcbdfbedd57140fcfde3a8b6341129b7845ff0170ab3026c7b484c6"
+  },
+  "authority": {
+    "authority_id": "policy_MD-POL-041.md",
+    "snapshot_sha256": "f9447793ce337239700f8c01478de6784ba93a6d6fb9d8b7ff5a772cb533e278"
+  },
+  "mode": "llm",
+  "assertions": [
+    {
+      "assertion": "The pre-approval threshold for attendee costs is 150 USD.",
+      "verdict": "VERIFIED",
+      "method": "llm:gpt-oss:20b",
+      "reasoning": "Passage 1 states that pre‑approval is required for any event expected to exceed 150 USD per attendee, which establishes the threshold at 150 USD.",
+      "supporting_passage": "6.1 Client entertainment requires pre-approval from the traveler's department head for any event expected to exceed 150 USD per attendee.",
+      "evidence_sha256": "6acb5f9a8ae4a3ec180bca0fd86206356df076748316a9849bc7cab3663b33d9",
+      "retrieval_count": 4
+    },
+    {
+      "assertion": "Attendee costs exceeding 150 USD require written pre-approval from the department head before the event.",
+      "verdict": "VERIFIED",
+      "method": "deterministic:numeric",
+      "reasoning": "Value 150 usd appears in the record sentence with matching context.",
+      "supporting_passage": "6.1 Client entertainment requires pre-approval from the traveler's department head for any event expected to exceed 150 USD per attendee.",
+      "evidence_sha256": "85ea3330a96827f4d1f566a251a7eea62b3cb3f8b02fe49a80eecf540c53de74",
+      "retrieval_count": 4
+    },
+    {
+      "assertion": "Wine reimbursement as client entertainment is capped at 60 USD per attendee.",
+      "verdict": "VERIFIED",
+      "method": "llm:gpt-oss:20b",
+      "reasoning": "Passage 1 states that alcohol served at client entertainment events is reimbursable up to 60 USD per attendee, which includes wine as a type of alcohol. The assertion matches this provision without any omitted qualifiers.",
+      "supporting_passage": "6.2 Alcohol served at client entertainment events is reimbursable up to 60 USD per attendee.",
+      "evidence_sha256": "33167b499b67918de071b8cf1bff67cdeae849bc5c43188fc771cce65415ec79",
+      "retrieval_count": 4
+    },
+    {
+      "assertion": "Itemized receipts must be submitted with your report within thirty days of travel.",
+      "verdict": "VERIFIED_WITH_LIMITATIONS",
+      "method": "llm:gpt-oss:20b",
+      "reasoning": "The record confirms that expense reports are due within thirty days of travel (Passage 1) and that itemized receipts are required for expenses over $25 (Passage 4). However, it does not explicitly state that the itemized receipts must be submitted together with the report, which is a qualifier in the assertion.",
+      "supporting_passage": "7.1 Expense reports must be submitted within thirty days of the last date of travel.\n\n4.2 All expenses over 25 USD require an itemized receipt. Credit card statements alone are not sufficient documentation.",
+      "evidence_sha256": "6589593ac05ddd4d71c9db3f3f868dc6c9a6218d953aee10d0810c36a0539312",
+      "retrieval_count": 4
+    },
+    {
+      "assertion": "If the total report cost stays under 5,000 USD, only direct manager's approval is needed.",
+      "verdict": "VERIFIED",
+      "method": "llm:gpt-oss:20b",
+      "reasoning": "The record states that expense reports are approved by the employee’s direct manager, and only those exceeding 5,000 USD require additional department‑head approval. This matches the assertion exactly.",
+      "supporting_passage": "Expense reports are approved by the employee's direct manager. Reports exceeding 5,000 USD in total require second-level approval from the department head.",
+      "evidence_sha256": "a8ee67a984a2da9951dd09944a6dbd1346128fe447738555cf03a09c6e157def",
+      "retrieval_count": 4
+    }
+  ],
+  "integrity_sha256": "ebcfc2ceb0471c76b1493fd3994a415a4cfdd3160b32b9bcd42c12bc0064820e"
+}
